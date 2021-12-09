@@ -31,6 +31,16 @@ compute_assignment <- function(cluster.matrix){
   return(assmt.vec)
 }
 
+compute_colmeans <- function(data.dt, label.vector){
+  mean.list <- list()
+  for(label in 1:max(label.vector)){
+    mean.list[[paste(label)]] <- 
+      colMeans(feature.dt[which(label.vector == label),])
+  }
+  mean.dt <- do.call(rbind, mean.list)
+  mean.dt <- as.data.table(mean.dt)
+  return(mean.dt)
+}
 # set num of clusters & make random assignment
 set.seed(1)
 # k values to loop through given the prompt
@@ -130,6 +140,7 @@ ggplot()+
   ),data=cluster.means.dt, color = "#FF0000",size = 2)+
   facet_grid(iter ~ ., scales = "free")
 
+# create data structure for plotting clusters
 for(k in K.iter.vals){
   expr.string <- "clustering.result.list$`"
   expr.string <- paste(expr.string, k, sep = "")
@@ -139,19 +150,44 @@ for(k in K.iter.vals){
     label = as.numeric(unlist(eval(parse(text = expr.string))))[1:nrow(feature.dt)]) 
 }
 final.res.dt <- do.call(rbind, final.res.list)
-
 plotting.dt <- data.table()
 plotting.dt <- feature.dt[rep(1:nrow(feature.dt), length(K.iter.vals)),]
 plotting.dt[, k := final.res.dt$k]
 plotting.dt[, label := final.res.dt$label]
+
+# create data structure for plotting means
+# refusing to cooperate
+#plot.mean.list <- list()
+#for(k in K.iter.vals){
+#  str(k)
+#  mean.dt <- compute_colmeans(feature.dt, final.res.dt[k==k]$label)
+#  str(mean.dt)
+#  plot.mean.list[[paste(k)]] <- mean.dt
+#}
+#plot.mean.dt <- do.call(rbind, plot.mean.list)
+
+plot.mean.list[[paste(4)]] <- compute_colmeans(feature.dt, final.res.dt[k==4]$label)
+plot.mean.list[[paste(5)]] <- compute_colmeans(feature.dt, final.res.dt[k==5]$label)
+plot.mean.list[[paste(6)]] <- compute_colmeans(feature.dt, final.res.dt[k==6]$label)
+plot.mean.list[[paste(7)]] <- compute_colmeans(feature.dt, final.res.dt[k==7]$label)
+plot.mean.dt <- do.call(rbind, plot.mean.list)
+k.vec <- vector(mode = "numeric")
+for(k in K.iter.vals){
+  k.vec <- c(k.vec, rep(k, each = k))
+}
+plot.mean.dt[, k := k.vec]
+
 ggplot()+
   geom_point(aes(
    x = V1,
    y = V3,
    color = label,
   ),data=plotting.dt)+
+  geom_point(aes(
+    x = V1, 
+    y = V3,
+  ),data = plot.mean.dt, color = "red", size = 2)+
   facet_grid(k ~ ., scales = "free")
-
 
 
 MSE.plot.list <- list()
