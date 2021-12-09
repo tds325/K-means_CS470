@@ -17,7 +17,9 @@ feature.dt <- data.table::fread(feature.input.filename)
 # take in two observations and calculate the euclidean distance between them
 pairwise_distance <- function(obs1, obs2){
   obs1 = as.vector(obs1[[1]])
+  obs1 = obs1[!is.na(obs1)]
   obs2 = as.vector(obs2[[1]])
+  obs2 = obs2[!is.na(obs2)]
   sq.result.sum <- sum((obs1 - obs2)^2)
   return(sqrt(sq.result.sum))
 } 
@@ -197,9 +199,9 @@ plot.mean.dt[, k := k.vec]
 # plot for k = 4:7 showing labeling and mean centers
 ggplot()+
   geom_point(aes(
-   x = V1,
-   y = V3,
-   color = label,
+    x = V1,
+    y = V3,
+    color = label,
   ),data=plotting.dt)+
   geom_point(aes(
     x = V1, 
@@ -228,8 +230,8 @@ MSE.plot.list[[paste(5)]] <- as.data.table(MSE.outer.list$`5`$`24`)
 MSE.plot.list[[paste(6)]] <- as.data.table(MSE.outer.list$`6`$`27`)
 MSE.plot.list[[paste(7)]] <- as.data.table(MSE.outer.list$`7`$`68`)
 MSE.plot.dt <- do.call(rbind.fill, MSE.plot.list)
-given.mse <- compute_MSE(feature.dt, label.vec)
-
+#given.mse <- compute_MSE(feature.dt, label.vec)
+given.mse <- MSE.plot.list$
 mse.list <- list()
 for(k in K.iter.vals){
   mse.list[k] = as.numeric(compute_MSE(feature.dt, final.res.dt[k==k]$label))
@@ -252,12 +254,47 @@ ggplot()+
     yintercept = given.mse,
     color = "red"
   ))
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Finding train and test subsets
-train.subset.indices <- sample(1:nrow(feature.dt), size = as.integer(nrow(feature.dt) * .9))
-train.subset <- feature.dt[,.I]
-train.subset <- train.subset%in%train.subset.indices
-test.subset <- !train.subset
-train.subset <- feature.dt[train.subset,]
-test.subset <- feature.dt[test.subset,]
+tsize <- as.integer(nrow(feature.dt) * .9)
+train.subset.indices <- sample(1:nrow(feature.dt), size = tsize)
+train.subset <- feature.dt[train.subset.indices,]
+test.subset.indices <- which(!((1:nrow(feature.dt))%in%train.subset.indices))
+test.subset <- feature.dt[test.subset.indices,]
+# ran train.subset on kmeans above
+
+# add features to the data.tables so we can keep track of cluster assignments
+K.neighbors <- 3
+train.subset[,assmt := cluster.assmt]
+test.subset[, assmt := K.neighbors]
+
+# initialize variables for K.n.n
+temp.list <- list()
+temp.dt <- data.table()
+
+# for each observation in the test subset, find the k closest points.
+# then using the tabulate function find the index of the 
+# maximum value and assign it to that cluster
+
+for(obs.n.test in 1:nrow(test.subset)){
+  for(obs.n.train in 1:nrow(train.subset)){
+    # design pattern of creating a list and then using rbind to get the results
+    # here we are storing the original position of test & train, 
+    # the cluster assignment #, and the distance between the test and 
+    # train points
+    temp.list[[paste(obs.n.train)]] <- 
+      data.table(obs.n.test, obs.n.train, assmt = 0, dist = pairwise_distance(test.subset[obs.n.test,-"assmt"], 
+                        test.subset[obs.n.train,-"assmt"]))
+  }
+  temp.dt <- do.call(rbind, temp.list)
+  temp.dt <- temp.dt[order(temp.dt$dist),]
+  temp.dt <- temp.dt[1:K.neighbors,]
+  
+  # for each item in the data.table, find which cluster assignment is represented the most
+  for(item in 1:nrow(temp.dt)){
+    temp.dt[item,]$assmt = train.subset$assmt[temp.dt$obs.n.train[item]]
+  }
+  test.subset[obs.n.test,]$assmt = which.max(tabulate(temp.dt$assmt))
+  
+}
 
