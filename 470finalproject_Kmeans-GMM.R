@@ -66,7 +66,7 @@ MSE.outer.list <- list()
 # K.iter.vals <- 2
 count <- 0
 MSE.total <- 0
-
+K.iter.vals = 6
 for(K.outer in K.iter.vals){
   # take samples of K.clusters random observations and set the initial mean values to the sample values
   initial.center.assignment.indices <- sample(length(feature.dt[1,]), K.outer)
@@ -252,3 +252,12 @@ ggplot()+
     yintercept = given.mse,
     color = "red"
   ))
+
+# Finding train and test subsets
+train.subset.indices <- sample(1:nrow(feature.dt), size = as.integer(nrow(feature.dt) * .9))
+train.subset <- feature.dt[,.I]
+train.subset <- train.subset%in%train.subset.indices
+test.subset <- !train.subset
+train.subset <- feature.dt[train.subset,]
+test.subset <- feature.dt[test.subset,]
+
