@@ -3,6 +3,7 @@ label.input.filename <- "y_train.txt"
 feature.input.filename <- "X_train.txt"
 
 library(ggplot2)
+library(plyr)
 library(data.table)
 # convert labels given to vector
 label.vec <- as.vector(data.table::fread(label.input.filename)[[1]])
@@ -58,7 +59,7 @@ for(K.outer in K.iter.vals){
   cluster.iter.mean.list <- list()
   
   # upper bound for iterations
-  iterations <- 15
+  iterations <- 100
   count = 0 # actual iterations carried out (needed for plot data.table creation below)
   for(iter in 1:iterations){
     if(identical(previous.means, init.assmt.means)){
@@ -112,11 +113,11 @@ for(K.outer in K.iter.vals){
 
 #`plotting` data table for showing each iteration with a single k value
 ##cluster.assmt.vec <- compute_assignment(cluster.assmt.matrix)
-plotting.dt <- feature.dt[rep(1:nrow(feature.dt), count),]
-plotting.dt[,iter := cluster.assmt.dt$iter]
-plotting.dt[,obs.assignments := cluster.assmt.dt$obs.assignments]
+#plotting.dt <- feature.dt[rep(1:nrow(feature.dt), count),]
+#plotting.dt[,iter := cluster.assmt.dt$iter]
+#plotting.dt[,obs.assignments := cluster.assmt.dt$obs.assignments]
 
-
+# ggplot for showing each iteration for a single k
 ggplot()+
   geom_point(aes(
     x=V1,
@@ -129,4 +130,39 @@ ggplot()+
   ),data=cluster.means.dt, color = "#FF0000",size = 2)+
   facet_grid(iter ~ ., scales = "free")
 
+for(k in K.iter.vals){
+  expr.string <- "clustering.result.list$`"
+  expr.string <- paste(expr.string, k, sep = "")
+  expr.string <- paste(expr.string, "`", sep = "")
+  final.res.list[[paste(k)]] <- data.table(
+    k, 
+    label = as.numeric(unlist(eval(parse(text = expr.string))))[1:nrow(feature.dt)]) 
+}
+final.res.dt <- do.call(rbind, final.res.list)
 
+plotting.dt <- data.table()
+plotting.dt <- feature.dt[rep(1:nrow(feature.dt), length(K.iter.vals)),]
+plotting.dt[, k := final.res.dt$k]
+plotting.dt[, label := final.res.dt$label]
+ggplot()+
+  geom_point(aes(
+   x = V1,
+   y = V3,
+   color = label,
+  ),data=plotting.dt)+
+  facet_grid(k ~ ., scales = "free")
+
+
+
+MSE.plot.list <- list()
+MSE.plot.list[[paste(4)]] <- as.data.table(MSE.outer.list$`4`$`25`)
+MSE.plot.list[[paste(5)]] <- as.data.table(MSE.outer.list$`5`$`24`)
+MSE.plot.list[[paste(6)]] <- as.data.table(MSE.outer.list$`6`$`27`)
+MSE.plot.list[[paste(7)]] <- as.data.table(MSE.outer.list$`7`$`68`)
+MSE.plot.dt <- do.call(rbind.fill, MSE.plot.list)
+
+ggplot()+
+  geom_path(aes(
+    x = K.outer,
+    y = MSE.total
+  ),data=MSE.plot.dt)
