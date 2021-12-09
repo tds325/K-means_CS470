@@ -33,13 +33,29 @@ compute_assignment <- function(cluster.matrix){
 
 compute_colmeans <- function(data.dt, label.vector){
   mean.list <- list()
+  main.data.table <<- data.dt
   for(label in 1:max(label.vector)){
     mean.list[[paste(label)]] <- 
       colMeans(feature.dt[which(label.vector == label),])
   }
-  mean.dt <- do.call(rbind, mean.list)
-  mean.dt <- as.data.table(mean.dt)
-  return(mean.dt)
+  main.data.table <- do.call(rbind, mean.list)
+  main.data.table <- as.data.table(main.data.table)
+  return(main.data.table)
+}
+
+compute_MSE <- function(data.dt, label.vector){
+  mean.dt <- compute_colmeans(data.dt, label.vector)
+  #mean.dt[,k := .I]
+  total.mse <- 0
+  for(label in 1:max(label.vector)){
+    temp.dt <- feature.dt[which(label.vector == label), ]
+    for(n in 1:nrow(temp.dt)){
+      total.mse = total.mse + (pairwise_distance(mean.dt[label,], temp.dt[n,]))^2
+      str(total.mse)
+    }
+  } 
+  str(total.mse)
+  return(total.mse)
 }
 # set num of clusters & make random assignment
 set.seed(1)
@@ -122,6 +138,7 @@ for(K.outer in K.iter.vals){
 }
 
 #`plotting` data table for showing each iteration with a single k value
+
 ##cluster.assmt.vec <- compute_assignment(cluster.assmt.matrix)
 #plotting.dt <- feature.dt[rep(1:nrow(feature.dt), count),]
 #plotting.dt[,iter := cluster.assmt.dt$iter]
@@ -140,7 +157,7 @@ ggplot()+
   ),data=cluster.means.dt, color = "#FF0000",size = 2)+
   facet_grid(iter ~ ., scales = "free")
 
-# create data structure for plotting clusters
+# create data structure for plotting clusters with different k values
 for(k in K.iter.vals){
   expr.string <- "clustering.result.list$`"
   expr.string <- paste(expr.string, k, sep = "")
@@ -159,9 +176,9 @@ plotting.dt[, label := final.res.dt$label]
 # refusing to cooperate
 #plot.mean.list <- list()
 #for(k in K.iter.vals){
-#  str(k)
+#  #str(k)
 #  mean.dt <- compute_colmeans(feature.dt, final.res.dt[k==k]$label)
-#  str(mean.dt)
+#  #str(mean.dt)
 #  plot.mean.list[[paste(k)]] <- mean.dt
 #}
 #plot.mean.dt <- do.call(rbind, plot.mean.list)
@@ -177,6 +194,7 @@ for(k in K.iter.vals){
 }
 plot.mean.dt[, k := k.vec]
 
+# plot for k = 4:7 showing labeling and mean centers
 ggplot()+
   geom_point(aes(
    x = V1,
@@ -188,7 +206,21 @@ ggplot()+
     y = V3,
   ),data = plot.mean.dt, color = "red", size = 2)+
   facet_grid(k ~ ., scales = "free")
+# the plot itself is not completely representative of the data, as there are 561 
+# dimensions and we are plotting two of them
 
+# ggplot of original labeling
+orig.means <- compute_colmeans(feature.dt, label.vec)
+ggplot()+
+  geom_point(aes(
+    x = V1,
+    y = V3,
+    color = label.vec,
+  ),data = feature.dt)+
+  geom_point(aes(
+    x = V1,
+    y = V3
+  ),data = orig.means, color = "red")
 
 MSE.plot.list <- list()
 MSE.plot.list[[paste(4)]] <- as.data.table(MSE.outer.list$`4`$`25`)
@@ -196,9 +228,27 @@ MSE.plot.list[[paste(5)]] <- as.data.table(MSE.outer.list$`5`$`24`)
 MSE.plot.list[[paste(6)]] <- as.data.table(MSE.outer.list$`6`$`27`)
 MSE.plot.list[[paste(7)]] <- as.data.table(MSE.outer.list$`7`$`68`)
 MSE.plot.dt <- do.call(rbind.fill, MSE.plot.list)
+given.mse <- compute_MSE(feature.dt, label.vec)
 
+mse.list <- list()
+for(k in K.iter.vals){
+  mse.list[k] = as.numeric(compute_MSE(feature.dt, final.res.dt[k==k]$label))
+}
+mse.dt <- do.call(rbind, mse.list)
+
+mse.dt[1,] = compute_MSE(feature.dt, final.res.dt[k==4]$label)
+mse.dt[2,] = compute_MSE(feature.dt, final.res.dt[k==5]$label)
+mse.dt[3,] = compute_MSE(feature.dt, final.res.dt[k==6]$label)
+mse.dt[4,] = compute_MSE(feature.dt, final.res.dt[k==7]$label)
+colnames(mse.dt) = c("mse")
+mse.dt <- as.data.table(mse.dt)
+mse.dt[, data.i := .I]
 ggplot()+
   geom_path(aes(
-    x = K.outer,
-    y = MSE.total
-  ),data=MSE.plot.dt)
+    x = data.i, 
+    y = mse,
+  ),data=mse.dt)+
+  geom_hline(aes(
+    yintercept = given.mse,
+    color = "red"
+  ))
