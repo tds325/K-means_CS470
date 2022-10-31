@@ -10,18 +10,18 @@ The input data was pulled from the [UCI Machine Learning Repository](https://arc
 
 ### Example run given 5 cluster centers
 
-<img src="images/5clustersexample.png" alt="Algorithm run given K=5" title="K-means iterations">
+<img src="./images/5clustersexample.png" alt="Algorithm run given K=5" title="K-means iterations">
 
 ### K=5 Final Assignment
 
-<img src="images/5clusterassignment.PNG" alt="Final assignment given K=5" title="K=5 assignment">
+<img src="./images/5clusterassignment.PNG" alt="Final assignment given K=5" title="K=5 assignment">
 
 ### Class comparison of K = {4,5,6,7}
 
-<img src="images/4-7clustersKmeans.png" alt="Algorithm running through K=4-7" title="K=4_to_7">
+<img src="./images/4-7clustersKmeans.png" alt="Algorithm running through K=4-7" title="K=4_to_7">
 
 ### Mean Squared Error Graph
 
-<img src="images/MSEgraph.PNG" alt="MSE Graph" title="Graph of MSE">
+<img src="./images/MSEgraph.PNG" alt="MSE Graph" title="Graph of MSE">
 
 Given the MSE graph, the kink in the curve appears to be around 6 clusters for this dataset.
