@@ -298,3 +298,62 @@ for(obs.n.test in 1:nrow(test.subset)){
   
 }
 
+# mapping K.n.n results back to the size of the original data set
+trained.feature.dt <- feature.dt
+trained.feature.dt[, assmt := 0]
+trained.feature.dt[train.subset.indices,]$assmt = train.subset$assmt
+trained.feature.dt[test.subset.indices,]$assmt = test.subset$assmt
+trained.means <- compute_colmeans(trained.feature.dt[,-"assmt"], trained.feature.dt$assmt)
+
+ggplot()+
+  geom_point(aes(
+    x = V1,
+    y = V3,
+    color = assmt,
+  ),data = trained.feature.dt)+
+  geom_point(aes(
+    x = V1,
+    y = V3,
+  ),data = trained.means, color = "red")
+  
+# PCA
+
+pca.fit <- prcomp(feature.dt, rank=2)
+digits.pca.dt <- as.data.table(pca.fit$x)
+digits.pca.dt[,label:= label.vec]
+# taking subset so ggplot is not crammed with labels
+subset.digits.pca.dt <- digits.pca.dt[1:nrow(digits.pca.dt)/2,]
+ggplot()+
+  geom_text(aes(
+    x = PC1,
+    y = PC2,
+    label = label,
+  ), data = subset.digits.pca.dt, size = 2)
+
+# GMM
+K <- 6
+mean.vec <- vector(mode = "numeric", length = ncol(feature.dt))
+mean.vec.mat <- matrix(nrow = length(mean.vec), nrow = length(mean.vec))
+cov.mat <- matrix(nrow = ncol(feature.dt), ncol = ncol(feature.dt))
+prior.weight.vec <- vector(mode = "numeric", length = K)
+prior.weight.mat <- 
+weights.mat <- 
+Estep <- function(matrix.dt){
+  # phi and weights updated
+  
+}
+
+Mstep <- function(matrix.dt){
+  for(k in K){
+    
+  }
+}
+
+predict_probabilities <- function(matrix.dt){
+  
+}
+
+predict <- function(matrix.dt){
+  
+}
+
